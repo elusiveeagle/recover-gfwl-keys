@@ -124,7 +124,7 @@ function Get-GFWLProductKey {
   )
 
   if (-not (Test-Path $TokenPath)) {
-    Write-Verbose "Skipping '$TitleId': Token.bin not found at '$TokenPath'. Title may not have been activated."
+    Write-Warning "Skipping title '$TitleId': Token.bin not found. Title was likely not activated."
     return $null
   }
 
@@ -144,14 +144,14 @@ function Get-GFWLProductKey {
 
     # Validate the key matches the expected 5×5 alphanumeric pattern
     if ($key -notmatch $script:ProductKeyPattern) {
-      Write-Warning "Decrypted key for '$TitleId' is invalid format: '$key'. Expected format is five groups of five alphanumeric characters (e.g., XXXXX-XXXXX-XXXXX-XXXXX-XXXXX)."
+      Write-Warning "Skipping title '$TitleId': Invalid product key format: '$key'. Expected format is five groups of five alphanumeric characters (e.g., XXXXX-XXXXX-XXXXX-XXXXX-XXXXX)."
       return $null
     }
 
     return $key
   }
   catch {
-    Write-Warning "Error decrypting key for '$TitleId': $_."
+    Write-Warning "Skipping title '$TitleId': Failed to decrypt product key: $_."
     return $null
   }
 }
@@ -165,7 +165,7 @@ $results = Get-ChildItem -Path $BasePath -Directory | ForEach-Object {
   Write-Verbose "Processing title: $titleIdRaw"
 
   if ($titleIdRaw -notmatch $script:TitleIdPattern) {
-    Write-Warning "Skipping folder '$titleIdRaw': Invalid Title ID format."
+    Write-Warning "Skipping title '$titleIdRaw': Invalid title ID format. Expected format is 8 hexadecimal characters (e.g., 4D5308B1)."
     return
   }
   $titleId  = $titleIdRaw.ToUpper()
@@ -173,7 +173,7 @@ $results = Get-ChildItem -Path $BasePath -Directory | ForEach-Object {
   $key      = Get-GFWLProductKey -TitleId $titleId -TokenPath $tokenBin
 
   if ($key) {
-    Write-Verbose "Recovered product key for '$titleId'."
+    Write-Verbose "Recovered product key for title '$titleId'."
     [PSCustomObject]@{
       'Title ID'    = $titleId
       'Product Key' = $key
@@ -191,5 +191,5 @@ if ($results.Count -eq 0) {
 
 Write-Host "`nRecovered $($results.Count) GFWL product keys" -ForegroundColor Green
 $results | Format-Table -AutoSize
-Write-Host 'To look up Title IDs and match them to title names, search by Title ID at the following URL:' -ForegroundColor Yellow
+Write-Host 'To look up title IDs and match them to title names, search by title ID at the following URL:' -ForegroundColor Yellow
 Write-Host "`nhttps://dbox.tools/titles/gfwl/`n" -ForegroundColor Cyan
