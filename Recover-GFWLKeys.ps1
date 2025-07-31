@@ -31,7 +31,7 @@
 
 .EXAMPLE
   .\Recover-GFWLKeys.ps1 -BasePath "D:\Custom\XLive\Titles"
-  Scans a custom directory for GFWL titles.
+  Scans a custom directory for GFWL titles and outputs recovered product keys.
 
 .EXAMPLE
   .\Recover-GFWLKeys.ps1 -Verbose
@@ -39,17 +39,17 @@
 
 .EXAMPLE
   .\Recover-GFWLKeys.ps1 -Help
-  Shows detailed help for the script.
+  Shows usage information.
 
 .NOTES
-  Requires PowerShell 5.1 or later. No administrator privileges needed.
+  Requires PowerShell 5.1 or later (Windows 10/11 support). No administrator privileges needed.
 
 .LINK
   https://github.com/elusiveeagle/recover-gfwl-keys
   https://dbox.tools/titles/gfwl/
 
 .LIMITATIONS
-  Product keys can only be recovered for the current Windows user profile, due to Windows Data Protection API (DPAPI) restrictions.
+  Product keys can only be recovered for the current Windows user account, due to Windows Data Protection API (DPAPI) restrictions.
   Keys activated under other Windows user accounts cannot be decrypted unless run as that user.
 
 .PRIVACY
@@ -156,7 +156,7 @@ function Get-GFWLProductKey {
   }
 }
 
-Write-Verbose "STEP 2: Scanning titles in '$BasePath'..."
+Write-Verbose "STEP 2: Processing titles in '$BasePath'..."
 
 # Iterate over each title subdirectory and attempt to recover the product key
 $results = Get-ChildItem -Path $BasePath -Directory | ForEach-Object {
@@ -181,6 +181,8 @@ $results = Get-ChildItem -Path $BasePath -Directory | ForEach-Object {
   }
 } | Where-Object { $_ }
 
+Write-Verbose "STEP 3: Output results..."
+
 # Output summary information and results in table format (if any)
 if ($results.Count -eq 0) {
   Write-Host "`nNo GFWL product keys were recovered.`n" -ForegroundColor Yellow
@@ -189,5 +191,5 @@ if ($results.Count -eq 0) {
 
 Write-Host "`nRecovered $($results.Count) GFWL product keys" -ForegroundColor Green
 $results | Format-Table -AutoSize
-Write-Host "To look up Title IDs and match them to title names, search by Title ID at the following URL:" -ForegroundColor Yellow
+Write-Host 'To look up Title IDs and match them to title names, search by Title ID at the following URL:' -ForegroundColor Yellow
 Write-Host "`nhttps://dbox.tools/titles/gfwl/`n" -ForegroundColor Cyan
