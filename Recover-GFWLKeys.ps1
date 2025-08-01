@@ -57,14 +57,15 @@
   https://dbox.tools/titles/gfwl/
 
 .LIMITATIONS
-  Product keys can only be recovered for the current Windows user account, due to Windows Data Protection API (DPAPI) restrictions.
-  This means you must run this script as each Windows user that may have activated any titles.
+  Each Windows user account stores GFWL activation data separately.
+  In addition, product keys are encrypted using the Windows Data Protection API (DPAPI) specific to the user account that activated the titles.
+  Run this script under the same account used to activate the titles.
 
 .PRIVACY
   This script does not transmit any data over the network. All operations are performed locally.
 
 .VERSION
-  1.0.0
+  1.1.0
 #>
 
 #Requires -Version 5.1
@@ -93,10 +94,14 @@ New-Variable -Name TitleIdPattern -Value '^[0-9a-fA-F]{8}$' -Scope Script -Optio
 
 Write-Verbose 'STEP 1: Verifying requirements...'
 
-# Verify GFWL titles directory exists
-if (-not (Test-Path $BasePath)) {
-  Write-Error "FATAL: GFWL titles path not found: '$BasePath'."
-  exit 1
+# Verify root directory path exists
+if (-not (Test-Path $BasePath -PathType Container)) {
+  Write-Warning @"
+The scan path does not exist: $BasePath
+
+This is expected if no GFWL titles have been installed or activated under the current Windows user account.
+"@
+  exit 0
 }
 
 # Attempt to load the required .NET assemblies
@@ -131,8 +136,8 @@ function Get-GFWLProductKey {
     [string]$TokenPath
   )
 
-  if (-not (Test-Path $TokenPath)) {
-    Write-Warning "Skipping title '$TitleId': Token.bin not found. Title is likely not activated."
+  if (-not (Test-Path $TokenPath -PathType Leaf)) {
+    Write-Verbose "Skipping title '$TitleId': Token.bin not found. Title is likely not activated."
     return $null
   }
 
@@ -152,31 +157,43 @@ function Get-GFWLProductKey {
 
     # Validate the key matches the expected 5×5 alphanumeric pattern
     if ($key -notmatch $script:ProductKeyPattern) {
-      Write-Warning "Skipping title '$TitleId': Invalid product key format: '$key'. Expected format is five groups of five alphanumeric characters (e.g., XXXXX-XXXXX-XXXXX-XXXXX-XXXXX)."
+      Write-Warning "Skipping title '$TitleId': Decryption succeeded, but the product key format is invalid: '$key'. Expected format is five groups of five alphanumeric characters (e.g., XXXXX-XXXXX-XXXXX-XXXXX-XXXXX)."
       return $null
     }
 
     return $key
   }
   catch {
-    Write-Warning "Skipping title '$TitleId': Failed to decrypt product key: $_."
+    Write-Warning "Skipping title '$TitleId': Failed to decrypt Token.bin at '$TokenPath'. The file is possibly corrupted or inaccessible for your current user context."
+    Write-Verbose "Decryption error details: $_"
     return $null
   }
 }
 
 Write-Verbose "STEP 2: Processing titles in '$BasePath'..."
 
-# Iterate over each title subdirectory and attempt to recover the product key
-$results = Get-ChildItem -Path $BasePath -Directory | ForEach-Object {
-  $titleIdRaw = $_.Name
+# Validate the base path contains valid GFWL title subdirectories
+$allSubdirs = Get-ChildItem -Path $BasePath -Directory
+$validDirs = $allSubdirs | Where-Object { $_.Name -match $script:TitleIdPattern }
 
-  Write-Verbose "Processing title: $titleIdRaw"
+if ($validDirs.Count -eq 0) {
+  Write-Warning @"
+No valid GFWL title subdirectories detected at path: $BasePath
 
-  if ($titleIdRaw -notmatch $script:TitleIdPattern) {
-    Write-Warning "Skipping title '$titleIdRaw': Invalid title ID format. Expected format is 8 hexadecimal characters (e.g., 4D5308B1)."
-    return
-  }
-  $titleId  = $titleIdRaw.ToUpper()
+Expected each subdirectory name to follow the 8-digit hexadecimal title ID format (e.g., 4D5308B1).
+This typically occurs when the script is pointed at the wrong directory.
+
+Check your directory and try again.
+"@
+  exit 0
+}
+
+# Iterate over each valid title subdirectory and attempt to recover the product key
+$results = $validDirs | ForEach-Object {
+  $titleId = $_.Name.ToUpper()
+
+  Write-Verbose "Processing title: $titleId"
+
   $tokenBin = Join-Path $_.FullName 'Token.bin'
   $key      = Get-GFWLProductKey -TitleId $titleId -TokenPath $tokenBin
 
@@ -193,11 +210,21 @@ Write-Verbose "STEP 3: Output results..."
 
 # Output summary information and results in table format (if any)
 if ($results.Count -eq 0) {
-  Write-Host "`nNo GFWL product keys were recovered.`n" -ForegroundColor Yellow
+  Write-Warning @"
+No GFWL product keys were recovered.
+
+This is expected if:
+  - No GFWL titles have been activated under the current Windows user account
+  - The scanned path doesn't contain any activation data (e.g., Token.bin files)
+
+Checked path: $BasePath
+
+For debugging or additional details, re-run the script with -Verbose.
+"@
   exit 0
 }
 
 Write-Host "`nRecovered $($results.Count) GFWL product keys" -ForegroundColor Green
 $results | Format-Table -AutoSize
-Write-Host 'To look up title IDs and match them to title names, search by title ID at the following URL:' -ForegroundColor Yellow
+Write-Host 'Use the following URL to match title IDs to title names:' -ForegroundColor Yellow
 Write-Host "`nhttps://dbox.tools/titles/gfwl/`n" -ForegroundColor Cyan
