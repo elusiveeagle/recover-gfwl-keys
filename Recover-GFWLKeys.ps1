@@ -7,10 +7,10 @@
   by locating and decrypting each title’s activation data.
 
   The script performs the following actions:
-    - Scans the default GFWL titles directory or a user-specified root path
+    - Scans the default GFWL titles directory (or a user-specified root path)
     - Identifies valid title-specific subdirectories containing "Token.bin" activation files
     - Decrypts each product key using Windows Data Protection API (DPAPI)
-    - Validates the format and logs warnings for any decryption issues
+    - Validates the product key format and logs warnings for any decryption issues
     - Outputs the recovered product keys alongside their corresponding title IDs
 
   Note: Use https://dbox.tools/titles/gfwl/ to match title IDs to title names.
