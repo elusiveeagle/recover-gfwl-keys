@@ -1,11 +1,19 @@
 ﻿<#
 .SYNOPSIS
-  Recover previously activated Games for Windows LIVE (GFWL) product keys.
+  Recover product keys of previously activated Games for Windows LIVE (GFWL) titles.
 
 .DESCRIPTION
-  This script scans for 'Token.bin' files under the current Windows user's GFWL title directories,
-  decrypts embedded product keys using Windows Data Protection API (DPAPI),
-  and returns a list of valid keys mapped to their title IDs.
+  This script recovers product keys for previously activated Games for Windows LIVE (GFWL) titles
+  by locating and decrypting each title’s activation data.
+
+  The script performs the following actions:
+    - Scans the default GFWL titles directory or a user-specified root path
+    - Identifies valid title-specific subdirectories containing "Token.bin" activation files
+    - Decrypts each product key using Windows Data Protection API (DPAPI)
+    - Validates the format and logs warnings for any decryption issues
+    - Outputs the recovered product keys alongside their corresponding title IDs
+
+  Note: Use https://dbox.tools/titles/gfwl/ to match title IDs to title names.
 
   Example output:
 
@@ -31,7 +39,7 @@
 
 .EXAMPLE
   .\Recover-GFWLKeys.ps1 -BasePath "D:\Custom\XLive\Titles"
-  Scans a custom directory for GFWL titles and outputs recovered product keys.
+  Uncommon. Scans a custom directory for GFWL titles and outputs recovered product keys.
 
 .EXAMPLE
   .\Recover-GFWLKeys.ps1 -Verbose
@@ -42,7 +50,7 @@
   Shows usage information.
 
 .NOTES
-  Requires PowerShell 5.1 or later (Windows 10/11 support). No administrator privileges needed.
+  Requires PowerShell 5.1 or later (available with Windows 10 and later). No administrator privileges needed.
 
 .LINK
   https://github.com/elusiveeagle/recover-gfwl-keys
@@ -50,7 +58,7 @@
 
 .LIMITATIONS
   Product keys can only be recovered for the current Windows user account, due to Windows Data Protection API (DPAPI) restrictions.
-  Keys activated under other Windows user accounts cannot be decrypted unless run as that user.
+  This means you must run this script as each Windows user that may have activated any titles.
 
 .PRIVACY
   This script does not transmit any data over the network. All operations are performed locally.
@@ -124,7 +132,7 @@ function Get-GFWLProductKey {
   )
 
   if (-not (Test-Path $TokenPath)) {
-    Write-Warning "Skipping title '$TitleId': Token.bin not found. Title was likely not activated."
+    Write-Warning "Skipping title '$TitleId': Token.bin not found. Title is likely not activated."
     return $null
   }
 
