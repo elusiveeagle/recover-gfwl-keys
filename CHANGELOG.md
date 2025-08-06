@@ -11,9 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Add title-name lookup for recovered keys (covers most *Games for Windows* titles).
+- Display title names for recovered keys (covers most *Games for Windows* titles).
 - Introduce [CHANGELOG.md](./CHANGELOG.md) file to document changes.
-- Introduce [NOTICE](./NOTICE) file to summarize licensing and provide attribution.
+- Add [NOTICE](./NOTICE) file to summarize licensing and provide attribution.
 
 ### Changed
 
