@@ -9,7 +9,7 @@ on:
 jobs:
   test-powershell-5x:
     name: Test Windows PowerShell ${{ matrix.ps-version }}
-    runs-on: windows-2019
+    runs-on: windows-2022
 
     strategy:
       matrix:
