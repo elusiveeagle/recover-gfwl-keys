@@ -13,21 +13,23 @@ jobs:
 
     strategy:
       matrix:
-        ps-version: [ '5.0', '5.1' ] # Possibly include '2.0', '3.0', and '4.0' later after support is added
+        # Possibly include '2.0', '3.0', and '4.0' later after support is added.
+        # To test older PS versions, it's necessary to install WMF.
+        ps-version: [ '5.0', '5.1' ]
 
     steps:
       - uses: actions/checkout@v4
 
-      # windows-latest includes PS 5.1 by default.
-      # To test older PS versions, add WMF installation steps here.
-
-      - name: Run script under PS ${{ matrix.ps-version }}
-        shell: powershell
+      - name: Run script under Windows PS ${{ matrix.ps-version }}
+        shell: cmd
         run: |
-          Write-Host "→ Testing script with Windows PowerShell ${{ matrix.ps-version }} (language mode)"
+          echo Testing script with Windows PowerShell ${{ matrix.ps-version }} (language mode)
 
-          powershell.exe -NoProfile -Version ${{ matrix.ps-version }} -File .\Recover-GFWLKeys.ps1
-          exit $LASTEXITCODE
+          "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" `
+            -NoProfile `
+            -Version ${{ matrix.ps-version }} `
+            -File .\Recover-GFWLKeys.ps1
+          IF %ERRORLEVEL% NEQ 0 EXIT /B %ERRORLEVEL%
 
   test-powershell-core:
     name: Test PowerShell Core ${{ matrix.ps-version }}
@@ -54,11 +56,20 @@ jobs:
         with:
           Version: ${{ matrix.ps-version }}
 
-      - name: Run script under PS Core ${{ matrix.ps-version }}
+      - name: Extract major version
+        id: extract
         shell: pwsh
-        continue-on-error: true # Allow failures for now
         run: |
-          Write-Host "→ Testing script with PowerShell Core ${{ matrix.ps-version }} (Windows)"
+          $fullVersion = '${{ matrix.ps-version }}'
+          $major = $fullVersion.Split('.')[0]
+          echo "major=$major" >> $GITHUB_OUTPUT
 
-          pwsh -NoProfile -File .\Recover-GFWLKeys.ps1
-          exit $LASTEXITCODE
+      - name: Run script under PS Core ${{ matrix.ps-version }}
+        shell: cmd
+        run: |
+          echo Testing script with PowerShell Core ${{ matrix.ps-version }} (Windows)
+
+          "C:\Program Files\PowerShell\%MAJOR%\pwsh.exe" `
+            -NoProfile `
+            -File .\Recover-GFWLKeys.ps1
+          IF %ERRORLEVEL% NEQ 0 EXIT /B %ERRORLEVEL%
