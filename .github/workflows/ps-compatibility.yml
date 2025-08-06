@@ -58,18 +58,19 @@ jobs:
 
       - name: Extract major version
         id: extract
-        shell: pwsh
+        shell: cmd
         run: |
-          $fullVersion = '${{ matrix.ps-version }}'
-          $major = $fullVersion.Split('.')[0]
-          echo "major=$major" >> $GITHUB_OUTPUT
+          set "fullVersion=${{ matrix.ps-version }}"
+          for /F "tokens=1 delims=." %%A in ("%fullVersion%") do (
+            echo major=%%A>>%GITHUB_OUTPUT%
+          )
 
       - name: Run script under PS Core ${{ matrix.ps-version }}
         shell: cmd
         run: |
           echo Testing script with PowerShell Core ${{ matrix.ps-version }} (Windows)
 
-          "C:\Program Files\PowerShell\%MAJOR%\pwsh.exe" ^
+          "C:\Program Files\PowerShell\${{ steps.extract.outputs.major }}\pwsh.exe" ^
             -NoProfile ^
             -File .\Recover-GFWLKeys.ps1
           IF %ERRORLEVEL% NEQ 0 EXIT /B %ERRORLEVEL%
