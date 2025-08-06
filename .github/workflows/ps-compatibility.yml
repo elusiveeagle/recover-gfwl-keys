@@ -25,9 +25,9 @@ jobs:
         run: |
           echo Testing script with Windows PowerShell ${{ matrix.ps-version }} (language mode)
 
-          "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" `
-            -NoProfile `
-            -Version ${{ matrix.ps-version }} `
+          "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" ^
+            -NoProfile ^
+            -Version ${{ matrix.ps-version }} ^
             -File .\Recover-GFWLKeys.ps1
           IF %ERRORLEVEL% NEQ 0 EXIT /B %ERRORLEVEL%
 
@@ -69,7 +69,7 @@ jobs:
         run: |
           echo Testing script with PowerShell Core ${{ matrix.ps-version }} (Windows)
 
-          "C:\Program Files\PowerShell\%MAJOR%\pwsh.exe" `
-            -NoProfile `
+          "C:\Program Files\PowerShell\%MAJOR%\pwsh.exe" ^
+            -NoProfile ^
             -File .\Recover-GFWLKeys.ps1
           IF %ERRORLEVEL% NEQ 0 EXIT /B %ERRORLEVEL%
