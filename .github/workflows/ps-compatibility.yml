@@ -1,0 +1,64 @@
+name: PS Compatibility Matrix
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  test-powershell-5x:
+    name: Test Windows PowerShell ${{ matrix.ps-version }}
+    runs-on: windows-latest
+
+    strategy:
+      matrix:
+        ps-version: [ '5.0', '5.1' ] # Possibly include '2.0', '3.0', and '4.0' later after support is added
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # windows-latest includes PS 5.1 by default.
+      # To test older PS versions, add WMF installation steps here.
+
+      - name: Run script under PS ${{ matrix.ps-version }}
+        shell: powershell
+        run: |
+          Write-Host "→ Testing script with Windows PowerShell ${{ matrix.ps-version }} (language mode)"
+
+          powershell.exe -NoProfile -Version ${{ matrix.ps-version }} -File .\Recover-GFWLKeys.ps1
+          exit $LASTEXITCODE
+
+  test-powershell-core:
+    name: Test PowerShell Core ${{ matrix.ps-version }}
+    runs-on: windows-latest
+
+    strategy:
+      matrix:
+        ps-version:
+          - 6.0.0
+          # - 6.1.0
+          # - 6.2.0
+          - 7.0.0
+          # - 7.1.0
+          # - 7.2.0
+          # - 7.3.0
+          # - 7.4.0
+          # - 7.5.0
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install PowerShell ${{ matrix.ps-version }}
+        uses: PowerShell/setup-powershell@v2
+        with:
+          version: ${{ matrix.ps-version }}
+
+      - name: Run script under PS Core ${{ matrix.ps-version }}
+        shell: pwsh
+        continue-on-error: true # Allow failures for now
+        run: |
+          Write-Host "→ Testing script with PowerShell Core ${{ matrix.ps-version }} (Windows)"
+
+          pwsh -NoProfile -File .\Recover-GFWLKeys.ps1
+          exit $LASTEXITCODE
