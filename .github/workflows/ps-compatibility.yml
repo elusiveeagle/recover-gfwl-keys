@@ -8,7 +8,7 @@ on:
 
 jobs:
   test-powershell-5_1:
-    name: Test with Windows PowerShell 5.1
+    name: Test using Windows PowerShell 5.1
     runs-on: windows-2022
 
     steps:
@@ -17,13 +17,16 @@ jobs:
       - name: Run script
         shell: powershell
         run: |
-          Write-Host "> Testing script with Windows PowerShell $($PSVersionTable.PSVersion) (CLR version $($PSVersionTable.CLRVersion)) on $([Environment]::OSVersion.VersionString)"
-          Write-Host "--------------------------------------------------"
-          .\Recover-GFWLKeys.ps1
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          @('','-Help','-Verbose') | ForEach-Object {
+            Write-Host "--------------------------------------------------"
+            Write-Host "> Testing script with arg '$_' using Windows PowerShell $($PSVersionTable.PSVersion) (CLR version $($PSVersionTable.CLRVersion)) on $([Environment]::OSVersion.VersionString)"
+            Write-Host "--------------------------------------------------"
+            .\Recover-GFWLKeys.ps1 $_
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
 
   test-powershell-core:
-    name: Test with PowerShell Core ${{ matrix.ps-version }}
+    name: Test using PowerShell Core ${{ matrix.ps-version }}
     runs-on: windows-2022
 
     strategy:
@@ -65,8 +68,11 @@ jobs:
             Select-Object -ExpandProperty FullName -First 1
 
           Write-Host "> Found PowerShell Core installation at: $installDir"
-          Write-Host "--------------------------------------------------"
 
-          # Invoke the Core binary to run the script
-          & "$installDir\pwsh.exe" -NoProfile -File .\Recover-GFWLKeys.ps1
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          @('','-Help','-Verbose') | ForEach-Object {
+            Write-Host "--------------------------------------------------"
+            Write-Host "> Testing script with arg '$_' using PowerShell Core $($Env:PSVER) on $([Environment]::OSVersion.VersionString)"
+            Write-Host "--------------------------------------------------"
+            & "$installDir\pwsh.exe" -NoProfile -Command "& '.\Recover-GFWLKeys.ps1' $_"
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
