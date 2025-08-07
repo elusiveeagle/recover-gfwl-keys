@@ -7,7 +7,7 @@ on:
     branches: [ "main" ]
 
 jobs:
-  test-powershell-5.1:
+  test-powershell-5_1:
     name: Test Windows PowerShell 5.1
     runs-on: windows-2022
 
