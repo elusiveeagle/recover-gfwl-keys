@@ -1,0 +1,100 @@
+name: PS Compatibility Matrix
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  test-powershell-5_1:
+    name: Test using Windows PowerShell 5.1
+    runs-on: windows-2022
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run script
+        shell: powershell
+        run: |
+          @('','-Help','-Verbose') | ForEach-Object {
+            Write-Host "--------------------------------------------------"
+            if ([string]::IsNullOrEmpty($_)) {
+              Write-Host "> Testing script without arguments using Windows PowerShell $($PSVersionTable.PSVersion) (CLR version $($PSVersionTable.CLRVersion)) on $([Environment]::OSVersion.VersionString)"
+              Write-Host "--------------------------------------------------"
+              powershell.exe -NoProfile -File .\Recover-GFWLKeys.ps1
+            } else {
+              Write-Host "> Testing script with arg '$_' using Windows PowerShell $($PSVersionTable.PSVersion) (CLR version $($PSVersionTable.CLRVersion)) on $([Environment]::OSVersion.VersionString)"
+              Write-Host "--------------------------------------------------"
+              powershell.exe -NoProfile -Command "& '.\Recover-GFWLKeys.ps1' $_"
+            }
+
+            if ($LASTEXITCODE -ne 0) {
+              Write-Error "Script failed with exit code $LASTEXITCODE"
+              exit $LASTEXITCODE
+            }
+          }
+
+  test-powershell-core:
+    name: Test using PowerShell Core ${{ matrix.ps-version }}
+    runs-on: windows-2022
+
+    strategy:
+      matrix:
+        ps-version:
+          - 6.0.0
+          # - 6.1.0
+          # - 6.2.0
+          - 6.2.7
+          - 7.0.0
+          # - 7.1.0
+          # - 7.2.0
+          # - 7.3.0
+          # - 7.4.0
+          # - 7.5.0
+          - 7.5.2
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install PowerShell Core ${{ matrix.ps-version }}
+        uses: PSModule/install-powershell@v1
+        with:
+          Version: ${{ matrix.ps-version }}
+
+      - name: Run script
+        shell: powershell
+        env:
+          PSVER: ${{ matrix.ps-version }}
+        run: |
+          Write-Host "> CI host is Windows PowerShell $($PSVersionTable.PSVersion)"
+          Write-Host "> Targeting PowerShell Core $Env:PSVER"
+
+          # Extract major version (e.g., 6 or 7)
+          $major = ($Env:PSVER -split '\.')[0]
+
+          # Find the first matching folder under C:\Program Files\PowerShell
+          $installDir = Get-ChildItem 'C:\Program Files\PowerShell' -Directory |
+            Where-Object Name -like "$major*" |
+            Select-Object -ExpandProperty FullName -First 1
+
+          Write-Host "> Found PowerShell Core installation at: $installDir"
+
+          # Test the script with and without arguments
+          @('','-Help','-Verbose') | ForEach-Object {
+            Write-Host "--------------------------------------------------"
+            if ([string]::IsNullOrEmpty($_)) {
+              Write-Host "> Testing script without arguments using PowerShell Core $($Env:PSVER) on $([Environment]::OSVersion.VersionString)"
+              Write-Host "--------------------------------------------------"
+              & "$installDir\pwsh.exe" -NoProfile -File .\Recover-GFWLKeys.ps1
+            } else {
+              Write-Host "> Testing script with arg '$_' using PowerShell Core $($Env:PSVER) on $([Environment]::OSVersion.VersionString)"
+              Write-Host "--------------------------------------------------"
+              & "$installDir\pwsh.exe" -NoProfile -Command "& '.\Recover-GFWLKeys.ps1' $_"
+            }
+
+            if ($LASTEXITCODE -ne 0) {
+              Write-Error "Script failed with exit code $LASTEXITCODE"
+              exit $LASTEXITCODE
+            }
+          }
