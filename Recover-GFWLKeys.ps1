@@ -398,28 +398,6 @@ if ($TitleMap.Count -eq 0) {
   Write-Verbose "Initialized title map with $($TitleMap.Count) entries."
 }
 
-# Function to get the title name for a given title ID
-function Get-TitleName {
-  [CmdletBinding()]
-  [OutputType([string])]
-  param(
-    [Parameter(Mandatory, Position = 0)]
-    [ValidateScript({ $_ -match $script:TitleIdPattern })]
-    [string]$TitleId
-  )
-
-  $upperId = $TitleId.ToUpperInvariant()
-  [string]$titleName = $null
-
-  # Attempt to retrieve the title name from the static map
-  if ($script:TitleMap -and $script:TitleMap.Count -gt 0 -and $script:TitleMap.TryGetValue($upperId, [ref]$titleName)) {
-    return $titleName
-  }
-
-  Write-Verbose "Unable to get the name for title with ID '$upperId'."
-  return $null
-}
-
 # Function to extract the product key from an encrypted Token.bin file
 # Returns null if the key is invalid or decryption fails
 function Get-GFWLProductKey {
@@ -467,6 +445,28 @@ function Get-GFWLProductKey {
     Write-Verbose "Decryption error details: $_"
     return $null
   }
+}
+
+# Function to get the title name for a given title ID
+function Get-TitleName {
+  [CmdletBinding()]
+  [OutputType([string])]
+  param(
+    [Parameter(Mandatory, Position = 0)]
+    [ValidateScript({ $_ -match $script:TitleIdPattern })]
+    [string]$TitleId
+  )
+
+  $upperId = $TitleId.ToUpperInvariant()
+  [string]$titleName = $null
+
+  # Attempt to retrieve the title name from the static map
+  if ($script:TitleMap -and $script:TitleMap.Count -gt 0 -and $script:TitleMap.TryGetValue($upperId, [ref]$titleName)) {
+    return $titleName
+  }
+
+  Write-Verbose "Unable to get the name for title with ID '$upperId'."
+  return $null
 }
 
 Write-Verbose "STEP 3: Processing titles in '$BasePath'..."
