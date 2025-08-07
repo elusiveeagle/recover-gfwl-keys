@@ -46,19 +46,15 @@ jobs:
         with:
           Version: ${{ matrix.ps-version }}
 
-      - name: Extract major version
-        id: extract
+      - name: List PowerShell Core installations
         shell: cmd
         run: |
-          set "fullVersion=${{ matrix.ps-version }}"
-          for /F "tokens=1 delims=." %%A in ("%fullVersion%") do (
-            echo major=%%A>>%GITHUB_OUTPUT%
-          )
+          dir C:\Program Files\PowerShell\
 
       - name: Add PS Core to PATH
         shell: cmd
         run: |
-          echo C:\Program Files\PowerShell\%MAJOR%>>%%GITHUB_PATH%%
+          echo C:\Program Files\PowerShell\${{ matrix.ps-version }}>>%%GITHUB_PATH%%
 
       - name: Show pwsh.exe path and run script
         shell: pwsh
