@@ -25,8 +25,15 @@
 .PARAMETER BasePath
   Optional. Specifies the root path to scan for GFWL titles. Defaults to "%LOCALAPPDATA%\Microsoft\XLive\Titles".
 
+.PARAMETER AllowWebLookup
+  Optional. If specified, the script will attempt to fetch title names from the dbox.tools API for titles not found in the local cache.
+  This requires an internet connection and may fail if the API is unavailable.
+
 .PARAMETER Help
   Optional. Displays usage information for the script.
+
+.PARAMETER Verbose
+  Optional. Enables verbose output for debugging and detailed logging.
 
 .INPUTS
   None. This script does not accept pipeline input.
@@ -37,6 +44,10 @@
 .EXAMPLE
   .\Recover-GFWLKeys.ps1
   Scans the default GFWL titles directory and outputs recovered product keys.
+
+.EXAMPLE
+  .\Recover-GFWLKeys.ps1 -AllowWebLookup
+  Scans the default GFWL titles directory, allows fetching of title names from the dbox.tools API for titles not found in the local cache, and outputs recovered product keys.
 
 .EXAMPLE
   .\Recover-GFWLKeys.ps1 -BasePath "D:\Custom\XLive\Titles"
@@ -54,11 +65,12 @@
   Requires PowerShell 5.1 or later (available with Windows 10 and later). No administrator privileges needed.
 
   Attribution:
-  This script uses title data from dbox.tools (https://dbox.tools/titles/gfwl/).
+  This script uses title data from dbox.tools (https://dbox.tools/titles/gfwl/) and its API (https://dbox.tools/api/docs).
 
 .LINK
   https://github.com/elusiveeagle/recover-gfwl-keys
   https://dbox.tools/titles/gfwl/
+  https://dbox.tools/api/docs
 
 .LIMITATIONS
   Each Windows user account stores GFWL activation data separately.
@@ -66,10 +78,12 @@
   Run this script under the same account used to activate the titles.
 
 .PRIVACY
-  This script does not transmit any data over the network. All operations are performed locally.
+  By default, this script does not transmit any data over the network. All operations are performed locally.
+  If the -AllowWebLookup parameter is used, however, the script will fetch title names from the dbox.tools API for titles not found in the local cache.
+  Ensure you trust the source of this script and review its contents before running it.
 
 .VERSION
-  1.2.0
+  1.3.0
 #>
 
 #Requires -Version 5.1
@@ -81,7 +95,10 @@ param(
   [ValidateScript({ Test-Path $_ -PathType Container })]
   [string]$BasePath = "$env:LOCALAPPDATA\Microsoft\XLive\Titles",
 
-  [Parameter(Position = 1, HelpMessage = 'Display usage information.')]
+  [Parameter(Position = 1, HelpMessage = 'Allow fetching of title names from dbox.tools.')]
+  [switch]$AllowWebLookup,
+
+  [Parameter(Position = 2, HelpMessage = 'Display usage information.')]
   [Alias('?', 'h')]
   [switch]$Help
 )
@@ -393,7 +410,11 @@ Set-Variable -Name TitleMap -Value $TitleMap -Option ReadOnly
 
 # Ensure the static title map is initialized
 if ($TitleMap.Count -eq 0) {
-  Write-Warning 'Title map failed to initialize, preventing lookup of title names.'
+  if ($AllowWebLookup) {
+    Write-Verbose 'Title map is empty, but web lookup (via the -AllowWebLookup parameter) is enabled. Will attempt to fetch title names.'
+  } else {
+    Write-Warning 'Title map is empty and web lookup (via the -AllowWebLookup parameter) is disabled. No title names will be available.'
+  }
 } else {
   Write-Verbose "Initialized title map with $($TitleMap.Count) entries."
 }
@@ -404,11 +425,11 @@ function Get-GFWLProductKey {
   [CmdletBinding()]
   [OutputType([string])]
   param(
-    [Parameter(Mandatory, Position = 0)]
+    [Parameter(Mandatory, Position = 0, HelpMessage = 'The ID of the title to recover the product key for (e.g., 4D5308B1).')]
     [ValidateScript({ $_ -match $script:TitleIdPattern })]
     [string]$TitleId,
 
-    [Parameter(Mandatory, Position = 1)]
+    [Parameter(Mandatory, Position = 1, HelpMessage = 'Path to the Token.bin file for the title.')]
     [ValidateNotNullOrEmpty()]
     [string]$TokenPath
   )
@@ -447,26 +468,96 @@ function Get-GFWLProductKey {
   }
 }
 
-# Function to get the title name for a given title ID
+<#
+.SYNOPSIS
+  Retrieves the friendly name for a title by ID, using an in-memory map first, then an API if allowed.
+
+.PARAMETER TitleId
+  Required. An 8-character hexadecimal string identifying the title to get the name for (e.g., 4D5308B1).
+
+.EXAMPLE
+  Get-TitleName -TitleId '4D5308B1'
+
+.NOTES
+  Respects $AllowWebLookup for API fallback. Ensure $script:TitleMap and $script:AllowWebLookup are defined before calling.
+#>
 function Get-TitleName {
   [CmdletBinding()]
   [OutputType([string])]
   param(
-    [Parameter(Mandatory, Position = 0)]
+    [Parameter(Mandatory, Position = 0, HelpMessage = 'The ID of the title to get the name for (e.g., 4D5308B1).')]
     [ValidateScript({ $_ -match $script:TitleIdPattern })]
     [string]$TitleId
   )
 
-  $upperId = $TitleId.ToUpperInvariant()
-  [string]$titleName = $null
-
-  # Attempt to retrieve the title name from the static map
-  if ($script:TitleMap -and $script:TitleMap.Count -gt 0 -and $script:TitleMap.TryGetValue($upperId, [ref]$titleName)) {
-    return $titleName
+  begin {
+    $upperId = $TitleId.ToUpperInvariant()
+    [string]$titleName = $null
   }
 
-  Write-Verbose "Unable to get the name for title with ID '$upperId'."
-  return $null
+  process {
+    # Attempt to retrieve the title name from the static map
+    if ($script:TitleMap -and $script:TitleMap.Count -gt 0 -and $script:TitleMap.TryGetValue($upperId, [ref]$titleName)) {
+      return $titleName
+    }
+  
+    # If web lookup is enabled, attempt to fetch the title name from the Dbox API
+    if ($script:AllowWebLookup) {
+      return Get-DboxTitleName -TitleId $upperId
+    }
+  
+    Write-Verbose "Unable to get the name for title with ID '$upperId'."
+    return $null
+  }
+}
+
+<#
+.SYNOPSIS
+  Fetches a title name by ID from the Dbox API.
+
+.PARAMETER TitleId
+  Required. An 8-character hexadecimal string identifying the title to fetch the name for (e.g., 4D5308B1).
+
+.PARAMETER BaseUri
+  Optional. The base URI of the Dbox API. Defaults to https://dbox.tools.
+
+.EXAMPLE
+  Get-DboxTitleName -TitleId '4D5308B1'
+#>
+function Get-DboxTitleName {
+  [CmdletBinding()]
+  [OutputType([string])]
+  param(
+    [Parameter(Mandatory, Position = 0, HelpMessage = 'The ID of the title to fetch the name for (e.g., 4D5308B1).')]
+    [ValidateScript({ $_ -match $script:TitleIdPattern })]
+    [string]$TitleId,
+
+    [Parameter(Position = 1, HelpMessage = 'The base URI of the Dbox API. Defaults to https://dbox.tools.')]
+    [ValidateNotNullOrEmpty()]
+    [string]$BaseUri = 'https://dbox.tools'
+  )
+
+  begin {
+    $upperId    = $TitleId.ToUpperInvariant()
+    $requestUri = '{0}/api/title_ids/{1}' -f $BaseUri.TrimEnd('/'), $upperId
+    $headers    = @{ Accept = 'application/json' }
+  }
+
+  process {
+    Write-Verbose "Sending GET $requestUri"
+    try {
+      $response = Invoke-RestMethod -Uri $requestUri -Method Get -Headers $headers -ErrorAction Stop
+      if ($response.name) {
+        return $response.name
+      }
+      Write-Warning "API returned no name for title with ID '$upperId'."
+      return $null
+    }
+    catch {
+      Write-Warning "API lookup failed for title with ID '$upperId': $_"
+      return $null
+    }
+  }
 }
 
 Write-Verbose "STEP 3: Processing titles in '$BasePath'..."
