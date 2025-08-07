@@ -46,15 +46,31 @@ jobs:
         with:
           Version: ${{ matrix.ps-version }}
 
-      - name: List PowerShell Core installations
+      - name: Debug - List PowerShell Core installations
         shell: cmd
         run: |
-          dir C:\Program Files\PowerShell\
+          dir "C:\Program Files\PowerShell\"
+
+      - name: Debug - Show starting PATH
+        shell: cmd
+        run: |
+          echo ------------------------------------------------
+          echo PATH before writing to %GITHUB_PATH%:
+          echo %PATH%
+          echo ------------------------------------------------
 
       - name: Add PS Core to PATH
         shell: cmd
         run: |
           echo C:\Program Files\PowerShell\${{ matrix.ps-version }}>>%%GITHUB_PATH%%
+
+      - name: Debug - Show updated PATH
+        shell: cmd
+        run: |
+          echo ------------------------------------------------
+          echo PATH after writing to %GITHUB_PATH%:
+          echo %PATH%
+          echo ------------------------------------------------
 
       - name: Show pwsh.exe path and run script
         shell: pwsh
