@@ -19,10 +19,20 @@ jobs:
         run: |
           @('','-Help','-Verbose') | ForEach-Object {
             Write-Host "--------------------------------------------------"
-            Write-Host "> Testing script with arg '$_' using Windows PowerShell $($PSVersionTable.PSVersion) (CLR version $($PSVersionTable.CLRVersion)) on $([Environment]::OSVersion.VersionString)"
-            Write-Host "--------------------------------------------------"
-            .\Recover-GFWLKeys.ps1 $_
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            if ([string]::IsNullOrEmpty($_)) {
+              Write-Host "> Testing script without arguments using Windows PowerShell $($PSVersionTable.PSVersion) (CLR version $($PSVersionTable.CLRVersion)) on $([Environment]::OSVersion.VersionString)"
+              Write-Host "--------------------------------------------------"
+              .\Recover-GFWLKeys.ps1
+            } else {
+              Write-Host "> Testing script with arg '$_' using Windows PowerShell $($PSVersionTable.PSVersion) (CLR version $($PSVersionTable.CLRVersion)) on $([Environment]::OSVersion.VersionString)"
+              Write-Host "--------------------------------------------------"
+              .\Recover-GFWLKeys.ps1 $_
+            }
+
+            if ($LASTEXITCODE -ne 0) {
+              Write-Error "Script failed with exit code $LASTEXITCODE"
+              exit $LASTEXITCODE
+            }
           }
 
   test-powershell-core:
@@ -71,8 +81,18 @@ jobs:
 
           @('','-Help','-Verbose') | ForEach-Object {
             Write-Host "--------------------------------------------------"
-            Write-Host "> Testing script with arg '$_' using PowerShell Core $($Env:PSVER) on $([Environment]::OSVersion.VersionString)"
-            Write-Host "--------------------------------------------------"
-            & "$installDir\pwsh.exe" -NoProfile -Command "& '.\Recover-GFWLKeys.ps1' $_"
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            if ([string]::IsNullOrEmpty($_)) {
+              Write-Host "> Testing script without arguments using PowerShell Core $($Env:PSVER) on $([Environment]::OSVersion.VersionString)"
+              Write-Host "--------------------------------------------------"
+              & "$installDir\pwsh.exe" -NoProfile -File .\Recover-GFWLKeys.ps1
+            } else {
+              Write-Host "> Testing script with arg '$_' using PowerShell Core $($Env:PSVER) on $([Environment]::OSVersion.VersionString)"
+              Write-Host "--------------------------------------------------"
+              & "$installDir\pwsh.exe" -NoProfile -Command "& '.\Recover-GFWLKeys.ps1' $_"
+            }
+
+            if ($LASTEXITCODE -ne 0) {
+              Write-Error "Script failed with exit code $LASTEXITCODE"
+              exit $LASTEXITCODE
+            }
           }
