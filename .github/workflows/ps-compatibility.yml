@@ -47,10 +47,23 @@ jobs:
           Version: ${{ matrix.ps-version }}
 
       - name: Run script
-        shell: cmd
+        shell: powershell
         env:
           PSVER: ${{ matrix.ps-version }}
         run: |
-          echo Testing script with PowerShell Core %PSVER%
-          "C:\Program Files\PowerShell\%PSVER%\pwsh.exe" -NoProfile -File .\Recover-GFWLKeys.ps1
-          IF %ERRORLEVEL% NEQ 0 EXIT /B %ERRORLEVEL%
+          Write-Host "→ CI host is Windows PowerShell $($PSVersionTable.PSVersion)"
+          Write-Host "→ Targeting PowerShell Core $Env:PSVER"
+
+          # Extract major version (e.g., 6 or 7)
+          $major = ($Env:PSVER -split '\.')[0]
+
+          # Find the first matching folder under C:\Program Files\PowerShell
+          $installDir = Get-ChildItem 'C:\Program Files\PowerShell' `
+                          -Directory | Where-Object Name -like "$major*" `
+                          | Select-Object -ExpandProperty FullName -First 1
+
+          Write-Host "→ Found PowerShell Core installation at: $installDir"
+
+          # Invoke the Core binary to run the script
+          & "$installDir\pwsh.exe" -NoProfile -File .\Recover-GFWLKeys.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
