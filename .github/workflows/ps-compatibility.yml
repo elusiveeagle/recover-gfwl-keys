@@ -17,7 +17,7 @@ jobs:
       - name: Run script
         shell: powershell
         run: |
-          Write-Host "→ Testing script with Windows PowerShell $($PSVersionTable.PSVersion) (CLR version $($PSVersionTable.CLRVersion))"
+          Write-Host "→ Testing script with Windows PowerShell $($PSVersionTable.PSVersion) (CLR version $($PSVersionTable.CLRVersion)) on $([Environment]::OSVersion.VersionString)"
           .\Recover-GFWLKeys.ps1
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
@@ -55,12 +55,15 @@ jobs:
             echo major=%%A>>%GITHUB_OUTPUT%
           )
 
-      - name: Run script under PS Core ${{ matrix.ps-version }}
+      - name: Add PS Core to PATH
         shell: cmd
         run: |
-          echo Testing script with PowerShell Core ${{ matrix.ps-version }} (Windows)
+          echo C:\Program Files\PowerShell\%MAJOR%>>%%GITHUB_PATH%%
 
-          "C:\Program Files\PowerShell\${{ steps.extract.outputs.major }}\pwsh.exe" ^
-            -NoProfile ^
-            -File .\Recover-GFWLKeys.ps1
-          IF %ERRORLEVEL% NEQ 0 EXIT /B %ERRORLEVEL%
+      - name: Show pwsh.exe path and run script
+        shell: pwsh
+        run: |
+          Write-Host "→ Testing script with PowerShell Core $($PSVersionTable.PSVersion) (CLR version $($PSVersionTable.CLRVersion)) on $([Environment]::OSVersion.VersionString)"
+          Write-Host "→ pwsh resolved from PATH: $(Get-Command pwsh).Path"
+          .\Recover-GFWLKeys.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
