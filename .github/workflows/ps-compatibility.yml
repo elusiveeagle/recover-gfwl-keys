@@ -8,7 +8,7 @@ on:
 
 jobs:
   test-powershell-5_1:
-    name: Test Windows PowerShell 5.1
+    name: Test with Windows PowerShell 5.1
     runs-on: windows-2022
 
     steps:
@@ -17,26 +17,28 @@ jobs:
       - name: Run script
         shell: powershell
         run: |
-          Write-Host "→ Testing script with Windows PowerShell $($PSVersionTable.PSVersion) (CLR version $($PSVersionTable.CLRVersion)) on $([Environment]::OSVersion.VersionString)"
+          Write-Host "> Testing script with Windows PowerShell $($PSVersionTable.PSVersion) (CLR version $($PSVersionTable.CLRVersion)) on $([Environment]::OSVersion.VersionString)"
+          Write-Host "--------------------------------------------------"
           .\Recover-GFWLKeys.ps1
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
   test-powershell-core:
-    name: Test PowerShell Core ${{ matrix.ps-version }}
-    runs-on: windows-latest
+    name: Test with PowerShell Core ${{ matrix.ps-version }}
+    runs-on: windows-2022
 
     strategy:
       matrix:
         ps-version:
           - 6.0.0
           # - 6.1.0
-          # - 6.2.0
+          - 6.2.0
           - 7.0.0
           # - 7.1.0
           # - 7.2.0
           # - 7.3.0
           # - 7.4.0
           # - 7.5.0
+          - 7.5.2
 
     steps:
       - uses: actions/checkout@v4
@@ -51,18 +53,19 @@ jobs:
         env:
           PSVER: ${{ matrix.ps-version }}
         run: |
-          Write-Host "→ CI host is Windows PowerShell $($PSVersionTable.PSVersion)"
-          Write-Host "→ Targeting PowerShell Core $Env:PSVER"
+          Write-Host "> CI host is Windows PowerShell $($PSVersionTable.PSVersion)"
+          Write-Host "> Targeting PowerShell Core $Env:PSVER"
 
           # Extract major version (e.g., 6 or 7)
           $major = ($Env:PSVER -split '\.')[0]
 
           # Find the first matching folder under C:\Program Files\PowerShell
-          $installDir = Get-ChildItem 'C:\Program Files\PowerShell' `
-                          -Directory | Where-Object Name -like "$major*" `
-                          | Select-Object -ExpandProperty FullName -First 1
+          $installDir = Get-ChildItem 'C:\Program Files\PowerShell' -Directory |
+            Where-Object Name -like "$major*" |
+            Select-Object -ExpandProperty FullName -First 1
 
-          Write-Host "→ Found PowerShell Core installation at: $installDir"
+          Write-Host "> Found PowerShell Core installation at: $installDir"
+          Write-Host "--------------------------------------------------"
 
           # Invoke the Core binary to run the script
           & "$installDir\pwsh.exe" -NoProfile -File .\Recover-GFWLKeys.ps1
