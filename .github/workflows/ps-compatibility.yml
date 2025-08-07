@@ -46,36 +46,11 @@ jobs:
         with:
           Version: ${{ matrix.ps-version }}
 
-      - name: Debug - List PowerShell Core installations
+      - name: Run script
         shell: cmd
+        env:
+          PSVER: ${{ matrix.ps-version }}
         run: |
-          dir "C:\Program Files\PowerShell\"
-
-      - name: Debug - Show starting PATH
-        shell: cmd
-        run: |
-          echo ------------------------------------------------
-          echo PATH before writing to %GITHUB_PATH%:
-          echo %PATH%
-          echo ------------------------------------------------
-
-      - name: Add PS Core to PATH
-        shell: cmd
-        run: |
-          echo C:\Program Files\PowerShell\${{ matrix.ps-version }}>>%%GITHUB_PATH%%
-
-      - name: Debug - Show updated PATH
-        shell: cmd
-        run: |
-          echo ------------------------------------------------
-          echo PATH after writing to %GITHUB_PATH%:
-          echo %PATH%
-          echo ------------------------------------------------
-
-      - name: Show pwsh.exe path and run script
-        shell: pwsh
-        run: |
-          Write-Host "→ Testing script with PowerShell Core $($PSVersionTable.PSVersion) (CLR version $($PSVersionTable.CLRVersion)) on $([Environment]::OSVersion.VersionString)"
-          Write-Host "→ pwsh resolved from PATH: $(Get-Command pwsh).Path"
-          .\Recover-GFWLKeys.ps1
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          echo Testing script with PowerShell Core %PSVER%
+          "C:\Program Files\PowerShell\%PSVER%\pwsh.exe" -NoProfile -File .\Recover-GFWLKeys.ps1
+          IF %ERRORLEVEL% NEQ 0 EXIT /B %ERRORLEVEL%
