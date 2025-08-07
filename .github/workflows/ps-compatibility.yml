@@ -7,29 +7,19 @@ on:
     branches: [ "main" ]
 
 jobs:
-  test-powershell-5x:
-    name: Test Windows PowerShell ${{ matrix.ps-version }}
+  test-powershell-5.1:
+    name: Test Windows PowerShell 5.1
     runs-on: windows-2022
-
-    strategy:
-      matrix:
-        # Possibly include '2.0', '3.0', and '4.0' later after support is added.
-        # To test older PS versions, it's necessary to install WMF.
-        ps-version: [ '5.0', '5.1' ]
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Run script under Windows PS ${{ matrix.ps-version }}
-        shell: cmd
+      - name: Run script
+        shell: powershell
         run: |
-          echo Testing script with Windows PowerShell ${{ matrix.ps-version }} (language mode)
-
-          "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" ^
-            -NoProfile ^
-            -Version ${{ matrix.ps-version }} ^
-            -File .\Recover-GFWLKeys.ps1
-          IF %ERRORLEVEL% NEQ 0 EXIT /B %ERRORLEVEL%
+          Write-Host "→ Testing script with Windows PowerShell $($PSVersionTable.PSVersion) (CLR version $($PSVersionTable.CLRVersion))"
+          .\Recover-GFWLKeys.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
   test-powershell-core:
     name: Test PowerShell Core ${{ matrix.ps-version }}
