@@ -539,26 +539,22 @@ function Get-DboxTitleName {
     [string]$BaseUri = 'https://dbox.tools'
   )
 
-  begin {
-    $upperId    = $TitleId.ToUpperInvariant()
-    $requestUri = '{0}/api/title_ids/{1}' -f $BaseUri.TrimEnd('/'), $upperId
-    $headers    = @{ Accept = 'application/json' }
-  }
+  $upperId    = $TitleId.ToUpperInvariant()
+  $requestUri = '{0}/api/title_ids/{1}' -f $BaseUri.TrimEnd('/'), $upperId
+  $headers    = @{ Accept = 'application/json' }
 
-  process {
-    Write-Verbose "Sending GET $requestUri"
-    try {
-      $response = Invoke-RestMethod -Uri $requestUri -Method Get -Headers $headers -ErrorAction Stop
-      if ($response.name) {
-        return $response.name
-      }
-      Write-Verbose "API returned no name for title with ID '$upperId'."
-      return $null
+  Write-Verbose "Sending GET $requestUri"
+  try {
+    $response = Invoke-RestMethod -Uri $requestUri -Method Get -Headers $headers -ErrorAction Stop
+    if ($response.name) {
+      return $response.name
     }
-    catch {
-      Write-Warning "API lookup failed for title with ID '$upperId': $_"
-      return $null
-    }
+    Write-Verbose "API returned no name for title with ID '$upperId'."
+    return $null
+  }
+  catch {
+    Write-Warning "API lookup failed for title with ID '$upperId': $_"
+    return $null
   }
 }
 
