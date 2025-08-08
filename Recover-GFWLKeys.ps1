@@ -551,7 +551,7 @@ function Get-DboxTitleName {
   $response = $null
 
   Write-Verbose "Sending GET $requestUri"
-  
+
   try {
     $response = Invoke-RestMethod -Uri $requestUri -Method Get -Headers $headers -ErrorAction Stop
   }
