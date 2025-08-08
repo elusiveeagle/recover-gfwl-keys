@@ -62,25 +62,28 @@
   Shows usage information.
 
 .NOTES
-  Requires PowerShell 5.1 or later (available with Windows 10 and later). No administrator privileges needed.
+  - This script is designed to run on Windows operating systems.
+  - No administrator privileges needed.
+  - Requires Windows PowerShell 5.1+ (available with Windows 10 and later). Or PowerShell Core 6.0+.
 
   Attribution:
   This script uses title data from dbox.tools (https://dbox.tools/titles/gfwl/) and its API (https://dbox.tools/api/docs).
 
 .LINK
-  https://github.com/elusiveeagle/recover-gfwl-keys
-  https://dbox.tools/titles/gfwl/
-  https://dbox.tools/api/docs
+  - https://github.com/elusiveeagle/recover-gfwl-keys
+  - https://dbox.tools/titles/gfwl/
+  - https://dbox.tools/api/docs
 
 .LIMITATIONS
-  Each Windows user account stores GFWL activation data separately.
-  In addition, product keys are encrypted using the Windows Data Protection API (DPAPI) specific to the user account that activated the titles.
-  Run this script under the same account used to activate the titles.
+  - Each Windows user account stores GFWL activation data separately.
+  - In addition, product keys are encrypted using the Windows Data Protection API (DPAPI) specific to the user account that activated the titles. Run this script under the same account used to activate the titles.
+  - Reported product keys for titles leveraging server-side activation (SSA) of keys may be masked (e.g., "XXXXX-XXXXX-XXXXX-XXXXX-XXXXX") or not available.
+  - Reported title names are based on GFW marketplace data (from dbox.tools) and may not match the original retail titles.
 
 .PRIVACY
-  By default, this script does not transmit any data over the network. All operations are performed locally.
-  If the -AllowWebLookup parameter is used, however, the script will fetch title names from the dbox.tools API for titles not found in the local cache.
-  Ensure you trust the source of this script and review its contents before running it.
+  - By default, this script does not transmit any data over the network. All operations are performed locally.
+  - If the -AllowWebLookup parameter is used, however, the script will fetch title names from the dbox.tools API for titles not found in the local cache.
+  - Ensure you trust the source of this script and review its contents before running it.
 
 .VERSION
   1.2.0
