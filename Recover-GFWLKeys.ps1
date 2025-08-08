@@ -25,8 +25,15 @@
 .PARAMETER BasePath
   Optional. Specifies the root path to scan for GFWL titles. Defaults to "%LOCALAPPDATA%\Microsoft\XLive\Titles".
 
+.PARAMETER AllowWebLookup
+  Optional. If specified, the script will attempt to fetch title names from the dbox.tools API for titles not found in the local cache.
+  This requires an internet connection and may fail if the API is unavailable.
+
 .PARAMETER Help
   Optional. Displays usage information for the script.
+
+.PARAMETER Verbose
+  Optional. Enables verbose output for debugging and detailed logging.
 
 .INPUTS
   None. This script does not accept pipeline input.
@@ -37,6 +44,10 @@
 .EXAMPLE
   .\Recover-GFWLKeys.ps1
   Scans the default GFWL titles directory and outputs recovered product keys.
+
+.EXAMPLE
+  .\Recover-GFWLKeys.ps1 -AllowWebLookup
+  Scans the default GFWL titles directory, allows fetching of title names from the dbox.tools API for titles not found in the local cache, and outputs recovered product keys.
 
 .EXAMPLE
   .\Recover-GFWLKeys.ps1 -BasePath "D:\Custom\XLive\Titles"
@@ -51,22 +62,28 @@
   Shows usage information.
 
 .NOTES
-  Requires PowerShell 5.1 or later (available with Windows 10 and later). No administrator privileges needed.
+  - This script is designed to run on Windows operating systems.
+  - No administrator privileges needed.
+  - Requires Windows PowerShell 5.1 (shipped with Windows 10 / Server 2016+), PowerShell Core 6.x, or PowerShell 7.x+.
 
   Attribution:
-  This script uses title data from dbox.tools (https://dbox.tools/titles/gfwl/).
+  This script uses title data from dbox.tools (https://dbox.tools/titles/gfwl/) and its API (https://dbox.tools/api/docs).
 
 .LINK
-  https://github.com/elusiveeagle/recover-gfwl-keys
-  https://dbox.tools/titles/gfwl/
+  - https://github.com/elusiveeagle/recover-gfwl-keys
+  - https://dbox.tools/titles/gfwl/
+  - https://dbox.tools/api/docs
 
 .LIMITATIONS
-  Each Windows user account stores GFWL activation data separately.
-  In addition, product keys are encrypted using the Windows Data Protection API (DPAPI) specific to the user account that activated the titles.
-  Run this script under the same account used to activate the titles.
+  - Each Windows user account stores GFWL activation data separately.
+  - In addition, product keys are encrypted using the Windows Data Protection API (DPAPI) specific to the user account that activated the titles. Run this script under the same account used to activate the titles.
+  - Product keys for titles leveraging Server-Side Activation (SSA) may be masked (e.g., "XXXXX-XXXXX-XXXXX-XXXXX-XXXXX") or not available.
+  - Reported title names are based on GFW/Xbox marketplace data (harvested by dbox.tools). The names may express variations in naming conventions or punctuation and may not match the original title exactly.
 
 .PRIVACY
-  This script does not transmit any data over the network. All operations are performed locally.
+  - By default, this script does not transmit any data over the network. All operations are performed locally.
+  - If the -AllowWebLookup parameter is used, however, the script will fetch title names from the dbox.tools API for titles not found in the local cache.
+  - Ensure you trust the source of this script and review its contents before running it.
 
 .VERSION
   1.2.0
@@ -81,7 +98,10 @@ param(
   [ValidateScript({ Test-Path $_ -PathType Container })]
   [string]$BasePath = "$env:LOCALAPPDATA\Microsoft\XLive\Titles",
 
-  [Parameter(Position = 1, HelpMessage = 'Display usage information.')]
+  [Parameter(HelpMessage = 'Allow fetching of title names from dbox.tools.')]
+  [switch]$AllowWebLookup,
+
+  [Parameter(HelpMessage = 'Display usage information.')]
   [Alias('?', 'h')]
   [switch]$Help
 )
@@ -124,8 +144,6 @@ catch {
   exit 1
 }
 
-Write-Verbose 'STEP 2: Initializing title map using data from dbox.tools (https://dbox.tools/titles/gfwl/)...'
-
 # Product key regex pattern (5×5 alphanumeric groups)
 # Matches GFWL product keys in the format: XXXXX-XXXXX-XXXXX-XXXXX-XXXXX (5 groups of 5 alphanumeric characters).
 New-Variable -Name ProductKeyPattern -Value '^([0-9A-Z]{5}-){4}[0-9A-Z]{5}$' -Scope Script -Option Constant
@@ -133,6 +151,8 @@ New-Variable -Name ProductKeyPattern -Value '^([0-9A-Z]{5}-){4}[0-9A-Z]{5}$' -Sc
 # Title ID regex pattern (8 hex digits)
 # Matches GFWL Title IDs, which are always 8-character hexadecimal strings (e.g., 4D5308B1).
 New-Variable -Name TitleIdPattern -Value '^[0-9A-F]{8}$' -Scope Script -Option Constant
+
+Write-Verbose 'STEP 2: Initializing local title map cache using data from dbox.tools (https://dbox.tools/titles/gfwl/)...'
 
 #region TitleMap JSON
 $TitleMapJson = @'
@@ -393,44 +413,25 @@ Set-Variable -Name TitleMap -Value $TitleMap -Option ReadOnly
 
 # Ensure the static title map is initialized
 if ($TitleMap.Count -eq 0) {
-  Write-Warning 'Title map failed to initialize, preventing lookup of title names.'
-} else {
-  Write-Verbose "Initialized title map with $($TitleMap.Count) entries."
-}
-
-# Function to get the title name for a given title ID
-function Get-TitleName {
-  [CmdletBinding()]
-  [OutputType([string])]
-  param(
-    [Parameter(Mandatory, Position = 0)]
-    [ValidateScript({ $_ -match $script:TitleIdPattern })]
-    [string]$TitleId
-  )
-
-  $upperId = $TitleId.ToUpperInvariant()
-  [string]$titleName = $null
-
-  # Attempt to retrieve the title name from the static map
-  if ($script:TitleMap -and $script:TitleMap.Count -gt 0 -and $script:TitleMap.TryGetValue($upperId, [ref]$titleName)) {
-    return $titleName
+  if ($AllowWebLookup) {
+    Write-Verbose 'Local title map cache is empty, but web lookup (via the -AllowWebLookup parameter) is enabled. Will attempt to fetch title names.'
+  } else {
+    Write-Warning 'Local title map cache is empty and web lookup (via the -AllowWebLookup parameter) is disabled. No title names will be available.'
   }
-
-  Write-Verbose "Unable to get the name for title with ID '$upperId'."
-  return $null
+} else {
+  Write-Verbose "Initialized local title map cache with $($TitleMap.Count) entries."
 }
 
 # Function to extract the product key from an encrypted Token.bin file
 # Returns null if the key is invalid or decryption fails
 function Get-GFWLProductKey {
   [CmdletBinding()]
-  [OutputType([string])]
   param(
-    [Parameter(Mandatory, Position = 0)]
+    [Parameter(Mandatory, Position = 0, HelpMessage = 'The ID of the title to recover the product key for (e.g., 4D5308B1).')]
     [ValidateScript({ $_ -match $script:TitleIdPattern })]
     [string]$TitleId,
 
-    [Parameter(Mandatory, Position = 1)]
+    [Parameter(Mandatory, Position = 1, HelpMessage = 'Path to the Token.bin file for the title.')]
     [ValidateNotNullOrEmpty()]
     [string]$TokenPath
   )
@@ -467,6 +468,108 @@ function Get-GFWLProductKey {
     Write-Verbose "Decryption error details: $_"
     return $null
   }
+}
+
+<#
+.SYNOPSIS
+  Retrieves the friendly name for a title by ID, using the local cache (in-memory map) lookup first, then an API request if allowed.
+
+.PARAMETER TitleId
+  Required. An 8-character hexadecimal string identifying the title to get the name for (e.g., 4D5308B1).
+
+.OUTPUTS
+  [string] The title's name, or $null if not retrieved.
+
+.EXAMPLE
+  Get-TitleName -TitleId '4D5308B1'
+
+.NOTES
+  Respects $AllowWebLookup for API fallback.
+  Will fast exit if no cache and web lookup is disabled (no name lookup is possible).
+#>
+function Get-TitleName {
+  [CmdletBinding()]
+  param(
+    [Parameter(Mandatory, Position = 0, HelpMessage = 'The ID of the title to get the name for (e.g., 4D5308B1).')]
+    [ValidateScript({ $_ -match $script:TitleIdPattern })]
+    [string]$TitleId
+  )
+
+  # Fast exit if no cache and web lookup is disabled (warning was previously issued)
+  if ((-not $script:TitleMap -or $script:TitleMap.Count -eq 0) -and -not $script:AllowWebLookup) {
+    return
+  }
+
+  $upperId           = $TitleId.ToUpperInvariant()
+  [string]$titleName = $null
+
+  # Attempt cache lookup first
+  if ($script:TitleMap -and $script:TitleMap.TryGetValue($upperId, [ref]$titleName)) {
+    return $titleName
+  }
+
+  # If web lookup is enabled, attempt Dbox API request
+  if ($script:AllowWebLookup) {
+    return Get-DboxTitleName -TitleId $upperId
+  }
+
+  Write-Verbose "Unable to get the name for title with ID '$upperId'."
+  return $null
+}
+
+<#
+.SYNOPSIS
+  Fetches a title name by ID from the Dbox API.
+
+.PARAMETER TitleId
+  Required. An 8-character hexadecimal string identifying the title to fetch the name for (e.g., 4D5308B1).
+
+.PARAMETER BaseUri
+  Optional. The base URI of the Dbox API. Defaults to https://dbox.tools.
+
+.OUTPUTS
+  [string] The title's name, or $null if not found or the request fails.
+
+.EXAMPLE
+  Get-DboxTitleName -TitleId '4D5308B1'
+#>
+function Get-DboxTitleName {
+  [CmdletBinding()]
+  param(
+    [Parameter(Mandatory, Position = 0, HelpMessage = 'The ID of the title to fetch the name for (e.g., 4D5308B1).')]
+    [ValidateScript({ $_ -match $script:TitleIdPattern })]
+    [string]$TitleId,
+
+    [Parameter(Position = 1, HelpMessage = 'The base URI of the Dbox API. Defaults to https://dbox.tools.')]
+    [ValidateNotNullOrEmpty()]
+    [uri]$BaseUri = 'https://dbox.tools'
+  )
+
+  $upperId    = $TitleId.ToUpperInvariant()
+  $requestUri = '{0}/api/title_ids/{1}' -f $BaseUri.AbsoluteUri.TrimEnd('/'), $upperId
+  $headers    = @{ Accept = 'application/json' }
+  $response = $null
+
+  Write-Verbose "Sending GET $requestUri"
+
+  try {
+    $response = Invoke-RestMethod -Uri $requestUri -Method Get -Headers $headers -ErrorAction Stop
+  }
+  catch {
+    Write-Warning "API lookup failed for title with ID '$upperId': $_"
+    return $null
+  }
+
+  # Normalize response to an array
+  $titles = @($response)
+
+  # Check and return the name of the first title if it exists
+  if ($titles.Count -gt 0 -and 'name' -in $titles[0].PSObject.Properties.Name) {
+    return $titles[0].name
+  }
+
+  Write-Verbose "API returned no name for title with ID '$upperId'."
+  return $null
 }
 
 Write-Verbose "STEP 3: Processing titles in '$BasePath'..."
