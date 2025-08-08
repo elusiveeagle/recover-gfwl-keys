@@ -426,7 +426,6 @@ if ($TitleMap.Count -eq 0) {
 # Returns null if the key is invalid or decryption fails
 function Get-GFWLProductKey {
   [CmdletBinding()]
-  [OutputType([string], [object])]
   param(
     [Parameter(Mandatory, Position = 0, HelpMessage = 'The ID of the title to recover the product key for (e.g., 4D5308B1).')]
     [ValidateScript({ $_ -match $script:TitleIdPattern })]
@@ -487,7 +486,6 @@ function Get-GFWLProductKey {
 #>
 function Get-TitleName {
   [CmdletBinding()]
-  [OutputType([string], [object])]
   param(
     [Parameter(Mandatory, Position = 0, HelpMessage = 'The ID of the title to get the name for (e.g., 4D5308B1).')]
     [ValidateScript({ $_ -match $script:TitleIdPattern })]
@@ -531,7 +529,6 @@ function Get-TitleName {
 #>
 function Get-DboxTitleName {
   [CmdletBinding()]
-  [OutputType([string], [object])]
   param(
     [Parameter(Mandatory, Position = 0, HelpMessage = 'The ID of the title to fetch the name for (e.g., 4D5308B1).')]
     [ValidateScript({ $_ -match $script:TitleIdPattern })]
