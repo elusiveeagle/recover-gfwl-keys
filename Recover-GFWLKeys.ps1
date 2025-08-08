@@ -141,8 +141,6 @@ catch {
   exit 1
 }
 
-Write-Verbose 'STEP 2: Initializing title map using data from dbox.tools (https://dbox.tools/titles/gfwl/)...'
-
 # Product key regex pattern (5×5 alphanumeric groups)
 # Matches GFWL product keys in the format: XXXXX-XXXXX-XXXXX-XXXXX-XXXXX (5 groups of 5 alphanumeric characters).
 New-Variable -Name ProductKeyPattern -Value '^([0-9A-Z]{5}-){4}[0-9A-Z]{5}$' -Scope Script -Option Constant
@@ -150,6 +148,8 @@ New-Variable -Name ProductKeyPattern -Value '^([0-9A-Z]{5}-){4}[0-9A-Z]{5}$' -Sc
 # Title ID regex pattern (8 hex digits)
 # Matches GFWL Title IDs, which are always 8-character hexadecimal strings (e.g., 4D5308B1).
 New-Variable -Name TitleIdPattern -Value '^[0-9A-F]{8}$' -Scope Script -Option Constant
+
+Write-Verbose 'STEP 2: Initializing local title map cache using data from dbox.tools (https://dbox.tools/titles/gfwl/)...'
 
 #region TitleMap JSON
 $TitleMapJson = @'
@@ -411,12 +411,12 @@ Set-Variable -Name TitleMap -Value $TitleMap -Option ReadOnly
 # Ensure the static title map is initialized
 if ($TitleMap.Count -eq 0) {
   if ($AllowWebLookup) {
-    Write-Verbose 'Title map is empty, but web lookup (via the -AllowWebLookup parameter) is enabled. Will attempt to fetch title names.'
+    Write-Verbose 'Local title map cache is empty, but web lookup (via the -AllowWebLookup parameter) is enabled. Will attempt to fetch title names.'
   } else {
-    Write-Warning 'Title map is empty and web lookup (via the -AllowWebLookup parameter) is disabled. No title names will be available.'
+    Write-Warning 'Local title map cache is empty and web lookup (via the -AllowWebLookup parameter) is disabled. No title names will be available.'
   }
 } else {
-  Write-Verbose "Initialized title map with $($TitleMap.Count) entries."
+  Write-Verbose "Initialized local title map cache with $($TitleMap.Count) entries."
 }
 
 # Function to extract the product key from an encrypted Token.bin file
@@ -470,7 +470,7 @@ function Get-GFWLProductKey {
 
 <#
 .SYNOPSIS
-  Retrieves the friendly name for a title by ID, using an in-memory map first, then an API if allowed.
+  Retrieves the friendly name for a title by ID, using the local cache (in-memory map) lookup first, then an API request if allowed.
 
 .PARAMETER TitleId
   Required. An 8-character hexadecimal string identifying the title to get the name for (e.g., 4D5308B1).
@@ -479,7 +479,8 @@ function Get-GFWLProductKey {
   Get-TitleName -TitleId '4D5308B1'
 
 .NOTES
-  Respects $AllowWebLookup for API fallback. Ensure $script:TitleMap and $script:AllowWebLookup are defined before calling.
+  Respects $AllowWebLookup for API fallback.
+  Will fast exit if no cache and web lookup is disabled (no name lookup is possible).
 #>
 function Get-TitleName {
   [CmdletBinding()]
@@ -490,25 +491,26 @@ function Get-TitleName {
     [string]$TitleId
   )
 
-  begin {
-    $upperId = $TitleId.ToUpperInvariant()
-    [string]$titleName = $null
-  }
+  # Fast exit if no cache and web lookup is disabled (warning was previously issued)
+  if ((-not $script:TitleMap -or $script:TitleMap.Count -eq 0) -and -not $script:AllowWebLookup) {
+    return
+    }
 
-  process {
-    # Attempt to retrieve the title name from the static map
-    if ($script:TitleMap -and $script:TitleMap.Count -gt 0 -and $script:TitleMap.TryGetValue($upperId, [ref]$titleName)) {
+  $upperId           = $TitleId.ToUpperInvariant()
+    [string]$titleName = $null
+
+  # Attempt cache lookup first
+  if ($script:TitleMap -and $script:TitleMap.TryGetValue($upperId, [ref]$titleName)) {
       return $titleName
     }
   
-    # If web lookup is enabled, attempt to fetch the title name from the Dbox API
+  # If web lookup is enabled, attempt Dbox API request
     if ($script:AllowWebLookup) {
       return Get-DboxTitleName -TitleId $upperId
     }
   
     Write-Verbose "Unable to get the name for title with ID '$upperId'."
     return $null
-  }
 }
 
 <#
