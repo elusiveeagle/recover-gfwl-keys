@@ -64,7 +64,7 @@
 .NOTES
   - This script is designed to run on Windows operating systems.
   - No administrator privileges needed.
-  - Requires Windows PowerShell 5.1 (available with Windows 10 and later). Or PowerShell Core 6+.
+  - Requires Windows PowerShell 5.1 (shipped with Windows 10 / Server 2016+), PowerShell Core 6.x, or PowerShell 7.x+.
 
   Attribution:
   This script uses title data from dbox.tools (https://dbox.tools/titles/gfwl/) and its API (https://dbox.tools/api/docs).
