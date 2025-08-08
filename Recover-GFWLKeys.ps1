@@ -477,6 +477,9 @@ function Get-GFWLProductKey {
 .PARAMETER TitleId
   Required. An 8-character hexadecimal string identifying the title to get the name for (e.g., 4D5308B1).
 
+.OUTPUTS
+  [string] The title's name, or $null if not retrieved.
+
 .EXAMPLE
   Get-TitleName -TitleId '4D5308B1'
 
@@ -524,6 +527,9 @@ function Get-TitleName {
 .PARAMETER BaseUri
   Optional. The base URI of the Dbox API. Defaults to https://dbox.tools.
 
+.OUTPUTS
+  [string] The title's name, or $null if not found or the request fails.
+
 .EXAMPLE
   Get-DboxTitleName -TitleId '4D5308B1'
 #>
@@ -536,26 +542,34 @@ function Get-DboxTitleName {
 
     [Parameter(Position = 1, HelpMessage = 'The base URI of the Dbox API. Defaults to https://dbox.tools.')]
     [ValidateNotNullOrEmpty()]
-    [string]$BaseUri = 'https://dbox.tools'
+    [uri]$BaseUri = 'https://dbox.tools'
   )
 
   $upperId    = $TitleId.ToUpperInvariant()
-  $requestUri = '{0}/api/title_ids/{1}' -f $BaseUri.TrimEnd('/'), $upperId
+  $requestUri = '{0}/api/title_ids/{1}' -f $BaseUri.AbsoluteUri.TrimEnd('/'), $upperId
   $headers    = @{ Accept = 'application/json' }
+  $response = $null
 
   Write-Verbose "Sending GET $requestUri"
+  
   try {
     $response = Invoke-RestMethod -Uri $requestUri -Method Get -Headers $headers -ErrorAction Stop
-    if ($response.name) {
-      return $response.name
-    }
-    Write-Verbose "API returned no name for title with ID '$upperId'."
-    return $null
   }
   catch {
     Write-Warning "API lookup failed for title with ID '$upperId': $_"
     return $null
   }
+
+  # Normalize response to an array
+  $titles = @($response)
+
+  # Check and return the name of the first title if it exists
+  if ($titles.Count -gt 0 -and 'name' -in $titles[0].PSObject.Properties.Name) {
+    return $titles[0].name
+  }
+
+  Write-Verbose "API returned no name for title with ID '$upperId'."
+  return $null
 }
 
 Write-Verbose "STEP 3: Processing titles in '$BasePath'..."
