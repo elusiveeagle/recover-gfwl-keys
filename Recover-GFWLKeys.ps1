@@ -64,7 +64,7 @@
 .NOTES
   - This script is designed to run on Windows operating systems.
   - No administrator privileges needed.
-  - Requires Windows PowerShell 5.1+ (available with Windows 10 and later). Or PowerShell Core 6.0+.
+  - Requires Windows PowerShell 5.1 (available with Windows 10 and later). Or PowerShell Core 6+.
 
   Attribution:
   This script uses title data from dbox.tools (https://dbox.tools/titles/gfwl/) and its API (https://dbox.tools/api/docs).
@@ -77,8 +77,8 @@
 .LIMITATIONS
   - Each Windows user account stores GFWL activation data separately.
   - In addition, product keys are encrypted using the Windows Data Protection API (DPAPI) specific to the user account that activated the titles. Run this script under the same account used to activate the titles.
-  - Reported product keys for titles leveraging server-side activation (SSA) of keys may be masked (e.g., "XXXXX-XXXXX-XXXXX-XXXXX-XXXXX") or not available.
-  - Reported title names are based on GFW marketplace data (from dbox.tools) and may not match the original retail titles.
+  - Product keys for titles leveraging Server-Side Activation (SSA) may be masked (e.g., "XXXXX-XXXXX-XXXXX-XXXXX-XXXXX") or not available.
+  - Reported title names are based on GFW/Xbox marketplace data (harvested by dbox.tools). The names may express variations in naming conventions or punctuation and may not match the original title exactly.
 
 .PRIVACY
   - By default, this script does not transmit any data over the network. All operations are performed locally.
