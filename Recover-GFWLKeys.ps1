@@ -497,23 +497,23 @@ function Get-TitleName {
   # Fast exit if no cache and web lookup is disabled (warning was previously issued)
   if ((-not $script:TitleMap -or $script:TitleMap.Count -eq 0) -and -not $script:AllowWebLookup) {
     return
-    }
+  }
 
   $upperId           = $TitleId.ToUpperInvariant()
-    [string]$titleName = $null
+  [string]$titleName = $null
 
   # Attempt cache lookup first
   if ($script:TitleMap -and $script:TitleMap.TryGetValue($upperId, [ref]$titleName)) {
-      return $titleName
-    }
-  
+    return $titleName
+  }
+
   # If web lookup is enabled, attempt Dbox API request
-    if ($script:AllowWebLookup) {
-      return Get-DboxTitleName -TitleId $upperId
-    }
-  
-    Write-Verbose "Unable to get the name for title with ID '$upperId'."
-    return $null
+  if ($script:AllowWebLookup) {
+    return Get-DboxTitleName -TitleId $upperId
+  }
+
+  Write-Verbose "Unable to get the name for title with ID '$upperId'."
+  return $null
 }
 
 <#
