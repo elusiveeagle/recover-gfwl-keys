@@ -13,9 +13,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Improve documentation, examples, and usage information (#3).
 - Configure PSScriptAnalyzer GitHub workflow to perform static code analysis of pull requests and pushes (#2).
 - Configure compatibility matrix GitHub workflow to perform quick compatibility checks of pull requests and pushes by executing the script using different builds of PowerShell (#2).
-- Improve documentation, examples, and usage information (#3).
+
+### Removed
+
+- Remove `Position` from `-Help` switch parameter to prevent unintended positional binding (#3).
+  - This improves clarity and aligns with PowerShell best practices for switch parameters.
+  - Positional invocation of `-Help` is no longer supported.
 
 ## [1.2.0] - 2025-08-06
 

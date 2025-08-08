@@ -98,10 +98,10 @@ param(
   [ValidateScript({ Test-Path $_ -PathType Container })]
   [string]$BasePath = "$env:LOCALAPPDATA\Microsoft\XLive\Titles",
 
-  [Parameter(Position = 1, HelpMessage = 'Allow fetching of title names from dbox.tools.')]
+  [Parameter(HelpMessage = 'Allow fetching of title names from dbox.tools.')]
   [switch]$AllowWebLookup,
 
-  [Parameter(Position = 2, HelpMessage = 'Display usage information.')]
+  [Parameter(HelpMessage = 'Display usage information.')]
   [Alias('?', 'h')]
   [switch]$Help
 )
