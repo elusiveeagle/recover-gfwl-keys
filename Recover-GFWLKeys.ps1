@@ -152,7 +152,7 @@ New-Variable -Name ProductKeyPattern -Value '^([0-9A-Z]{5}-){4}[0-9A-Z]{5}$' -Sc
 # Matches GFWL Title IDs, which are always 8-character hexadecimal strings (e.g., 4D5308B1).
 New-Variable -Name TitleIdPattern -Value '^[0-9A-F]{8}$' -Scope Script -Option Constant
 
-Write-Verbose 'STEP 2: Initializing local title map cache using data from dbox.tools (https://dbox.tools/titles/gfwl/)...'
+Write-Verbose 'STEP 2: Initializing local title cache using data from dbox.tools (https://dbox.tools/titles/gfwl/)...'
 
 #region TitleMap JSON
 $TitleMapJson = @'
@@ -414,14 +414,13 @@ Set-Variable -Name TitleMap -Value $TitleMap -Option ReadOnly
 # Ensure the static title map is initialized
 if ($TitleMap.Count -eq 0) {
   if ($AllowWebLookup) {
-    Write-Verbose 'Local title map cache is empty, but web lookup (-AllowWebLookup) is enabled. Will attempt to fetch title names.'
+    Write-Verbose 'Local title cache is empty, but web lookup (-AllowWebLookup) is enabled. Will attempt to fetch title names.'
   } else {
-    Write-Warning 'Local title map cache is empty and web lookup (-AllowWebLookup) is disabled.'
-    Write-Warning 'No title names will be available.'
+    Write-Warning 'Title names are unavailable: Local title cache is empty and web lookup (-AllowWebLookup) is disabled.'
     Write-Warning 'Consider re-running with -AllowWebLookup to fetch missing names.'
   }
 } else {
-  Write-Verbose "Initialized local title map cache with $($TitleMap.Count) entries."
+  Write-Verbose "Initialized local title cache with $($TitleMap.Count) entries."
 }
 
 # Track IDs missing from cache
