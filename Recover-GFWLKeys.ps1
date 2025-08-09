@@ -92,6 +92,7 @@
 #Requires -Version 5.1
 
 [CmdletBinding()]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '', Scope='Function', Target='Write-ResultsSummary', Justification='Outputs a human-readable results summary message')]
 param(
   [Parameter(Position = 0, HelpMessage = 'Root path to scan for GFWL titles.')]
   [ValidateNotNullOrEmpty()]
@@ -594,6 +595,23 @@ function Get-DboxTitleName {
   return $null
 }
 
+<#
+.SYNOPSIS
+  Outputs a results summary message to the console.
+
+.PARAMETER Message
+  Required. The message to output.
+#>
+function Write-ResultsSummary {
+  [CmdletBinding()]
+  param(
+    [Parameter(Mandatory)]
+    [string]$Message
+  )
+
+  Write-Host $Message -ForegroundColor Green
+}
+
 Write-Verbose "STEP 3: Processing titles in '$BasePath'..."
 
 # Validate the base path contains valid GFWL title subdirectories
@@ -649,7 +667,7 @@ For debugging or additional details, re-run the script with -Verbose.
   exit 0
 }
 
-Write-Host "`nRecovered $($results.Count) GFWL product keys" -ForegroundColor Green
+Write-ResultsSummary "`nRecovered $($results.Count) GFWL product keys"
 $results | Format-Table @{Name = 'Title ID'; Expression = { $_.TitleId.PadRight(10) } },
                         @{Name = 'Product Key'; Expression = { $_.ProductKey.PadRight(31) } },
                         @{Name = 'Title Name'; Expression = { $_.TitleName } }

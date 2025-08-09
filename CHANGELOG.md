@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Add Rugby League Live (ID: `484507D3`) to the built-in title cache (#6).
+- Address `PSAvoidUsingWriteHost` rule violation in results summary message (#7).
 
 ## [1.2.0] - 2025-08-06
 
