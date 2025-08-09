@@ -108,7 +108,7 @@ param(
 
 # Exit early if not on Windows
 if (-not ($env:OS -eq 'Windows_NT')) {
-  Write-Error 'This script is only supported on Windows.'
+  Write-Error 'FATAL: This script is only supported on Windows.'
   exit 1
 }
 
