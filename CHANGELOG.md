@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Optionally allow web lookup of title names via the new `-AllowWebLookup` parameter (#3).
+- Provide helpful user suggestions when title names cannot be resolved (#4).
 
 ### Changed
 

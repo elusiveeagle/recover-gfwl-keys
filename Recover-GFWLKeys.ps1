@@ -152,7 +152,7 @@ New-Variable -Name ProductKeyPattern -Value '^([0-9A-Z]{5}-){4}[0-9A-Z]{5}$' -Sc
 # Matches GFWL Title IDs, which are always 8-character hexadecimal strings (e.g., 4D5308B1).
 New-Variable -Name TitleIdPattern -Value '^[0-9A-F]{8}$' -Scope Script -Option Constant
 
-Write-Verbose 'STEP 2: Initializing local title map cache using data from dbox.tools (https://dbox.tools/titles/gfwl/)...'
+Write-Verbose 'STEP 2: Initializing local title cache using data from dbox.tools (https://dbox.tools/titles/gfwl/)...'
 
 #region TitleMap JSON
 $TitleMapJson = @'
@@ -414,13 +414,20 @@ Set-Variable -Name TitleMap -Value $TitleMap -Option ReadOnly
 # Ensure the static title map is initialized
 if ($TitleMap.Count -eq 0) {
   if ($AllowWebLookup) {
-    Write-Verbose 'Local title map cache is empty, but web lookup (via the -AllowWebLookup parameter) is enabled. Will attempt to fetch title names.'
+    Write-Verbose 'Local title cache is empty, but web lookup (-AllowWebLookup) is enabled. Will attempt to fetch title names.'
   } else {
-    Write-Warning 'Local title map cache is empty and web lookup (via the -AllowWebLookup parameter) is disabled. No title names will be available.'
+    Write-Warning 'Title names are unavailable: Local title cache is empty and web lookup (-AllowWebLookup) is disabled.'
+    Write-Warning 'Consider re-running with -AllowWebLookup to fetch missing names.'
   }
 } else {
-  Write-Verbose "Initialized local title map cache with $($TitleMap.Count) entries."
+  Write-Verbose "Initialized local title cache with $($TitleMap.Count) entries."
 }
+
+# Track IDs missing from cache
+$script:CacheMissedIds     = [System.Collections.Generic.SortedSet[string]]::new()
+
+# Track IDs that failed web lookup
+$script:WebLookupFailedIds = [System.Collections.Generic.SortedSet[string]]::new()
 
 # Function to extract the product key from an encrypted Token.bin file
 # Returns null if the key is invalid or decryption fails
@@ -486,6 +493,7 @@ function Get-GFWLProductKey {
 .NOTES
   Respects $AllowWebLookup for API fallback.
   Will fast exit if no cache and web lookup is disabled (no name lookup is possible).
+  Ensure $script:CacheMissedIds is initialized before calling this function, as it will add any IDs not found in the cache.
 #>
 function Get-TitleName {
   [CmdletBinding()]
@@ -514,6 +522,7 @@ function Get-TitleName {
   }
 
   Write-Verbose "Unable to get the name for title with ID '$upperId'."
+  $script:CacheMissedIds.Add($upperId) | Out-Null
   return $null
 }
 
@@ -532,6 +541,9 @@ function Get-TitleName {
 
 .EXAMPLE
   Get-DboxTitleName -TitleId '4D5308B1'
+
+.NOTES
+  Ensure $script:WebLookupFailedIds is initialized before calling this function, as it will add any IDs that fail to be looked up.
 #>
 function Get-DboxTitleName {
   [CmdletBinding()]
@@ -556,7 +568,8 @@ function Get-DboxTitleName {
     $response = Invoke-RestMethod -Uri $requestUri -Method Get -Headers $headers -ErrorAction Stop
   }
   catch {
-    Write-Warning "API lookup failed for title with ID '$upperId': $_"
+    Write-Warning "Web lookup failed for title with ID '$upperId': $_"
+    $script:WebLookupFailedIds.Add($upperId) | Out-Null
     return $null
   }
 
@@ -568,7 +581,9 @@ function Get-DboxTitleName {
     return $titles[0].name
   }
 
-  Write-Verbose "API returned no name for title with ID '$upperId'."
+  # Otherwise, it's a true lookup failure
+  Write-Warning "Web lookup returned no name for title with ID '$upperId'."
+  $script:WebLookupFailedIds.Add($upperId) | Out-Null
   return $null
 }
 
@@ -631,3 +646,18 @@ Write-Host "`nRecovered $($results.Count) GFWL product keys" -ForegroundColor Gr
 $results | Format-Table @{Name = 'Title ID'; Expression = { $_.TitleId.PadRight(10) } },
                         @{Name = 'Product Key'; Expression = { $_.ProductKey.PadRight(31) } },
                         @{Name = 'Title Name'; Expression = { $_.TitleName } }
+
+# Suggest web lookup if cache misses occurred
+if ($script:CacheMissedIds.Count -gt 0) {
+  $idsCsv = [string]::Join(', ', $script:CacheMissedIds)
+  Write-Warning "Could not resolve names for these title IDs from cache: $idsCsv"
+  Write-Warning 'Consider re-running with -AllowWebLookup to enable online lookup for missing title names.'
+}
+
+# Suggest verifying internet connection before opening an issue if web lookups were tried but still failed
+if ($script:WebLookupFailedIds.Count -gt 0) {
+  $idsCsv = [string]::Join(', ', $script:WebLookupFailedIds)
+  Write-Warning "Could not resolve names for these title IDs even with web lookup: $idsCsv"
+  Write-Warning 'Please verify your internet connection and try again.'
+  Write-Warning "If the issue persists, these titles may be missing from the Dbox API. You can report them at: https://github.com/elusiveeagle/recover-gfwl-keys/issues"
+}
