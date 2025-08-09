@@ -106,6 +106,12 @@ param(
   [switch]$Help
 )
 
+# Exit early if not on Windows
+if (-not ($env:OS -eq 'Windows_NT')) {
+  Write-Error 'This script is only supported on Windows.'
+  exit 1
+}
+
 if ($Help) {
   Get-Help -Detailed $MyInvocation.MyCommand.Path
   exit 0
