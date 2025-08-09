@@ -86,7 +86,7 @@
   - Ensure you trust the source of this script and review its contents before running it.
 
 .VERSION
-  1.2.0
+  1.3.0
 #>
 
 #Requires -Version 5.1
