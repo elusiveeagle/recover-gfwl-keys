@@ -234,6 +234,7 @@ $TitleMapJson = @'
   "46450FA4":  "Pro Cycling Manager",
   "46550FA0":  "Jewel Quest 5",
   "46550FA1":  "Family Feud Dream Home",
+  "484507D3":  "Rugby League",
   "48450FA0":  "AFL Live",
   "48450FA1":  "Rugby League Live 2",
   "49470FA1":  "Test Drive Ferrari Racing Legend",
